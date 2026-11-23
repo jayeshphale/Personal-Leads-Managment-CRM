@@ -46,7 +46,7 @@ export const EnrollmentSection: React.FC<EnrollmentSectionProps> = ({ lead, onLe
       setEnrollments(enr)
       setPackages(pkgs)
       if (pkgs.length > 0) {
-        const std = pkgs.find((p) => p.name === 'Standard') || pkgs[0]
+        const std = pkgs.find((p: Package) => p.name === 'Standard') || pkgs[0]
         setSelectedPackageName(std.name)
         setAmount(Number(std.price))
       }

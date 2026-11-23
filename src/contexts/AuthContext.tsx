@@ -3,6 +3,7 @@ import type { User, Session } from '@supabase/supabase-js'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import type { Profile } from '@/types/crm.types'
 import { getCurrentProfile } from '@/services/settings.service'
+import { initialMockProfile } from '@/lib/mockData'
 
 interface AuthContextType {
   user: User | null
@@ -10,7 +11,9 @@ interface AuthContextType {
   profile: Profile | null
   loading: boolean
   isConfigured: boolean
+  isDemoMode: boolean
   signIn: (email: string, pass: string) => Promise<{ error: Error | null }>
+  signInDemo: () => void
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
 }
@@ -22,6 +25,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(() => {
+    return localStorage.getItem('leadflow_crm_demo') === 'true'
+  })
 
   const fetchProfile = async () => {
     try {
@@ -33,6 +39,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   useEffect(() => {
+    // If demo mode was previously set
+    if (isDemoMode) {
+      setUser({
+        id: 'owner-uuid-1',
+        email: 'owner@leadflowcrm.com',
+        app_metadata: {},
+        user_metadata: { full_name: 'Jayesh Phale' },
+        aud: 'authenticated',
+        created_at: new Date().toISOString(),
+      } as User)
+      setProfile(initialMockProfile)
+      setLoading(false)
+      return
+    }
+
     if (!isSupabaseConfigured) {
       setLoading(false)
       return
@@ -63,13 +84,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       subscription.unsubscribe()
     }
-  }, [])
+  }, [isDemoMode])
 
   const signIn = async (email: string, pass: string) => {
     if (!isSupabaseConfigured) {
       return {
         error: new Error(
-          'Supabase credentials are not configured. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment.'
+          'Supabase credentials are not configured in .env. Click "Explore Demo Preview Mode" below to test the UI, or add your Supabase keys.'
         ),
       }
     }
@@ -80,7 +101,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { error: error ? new Error(error.message) : null }
   }
 
+  const signInDemo = () => {
+    localStorage.setItem('leadflow_crm_demo', 'true')
+    setIsDemoMode(true)
+    setUser({
+      id: 'owner-uuid-1',
+      email: 'owner@leadflowcrm.com',
+      app_metadata: {},
+      user_metadata: { full_name: 'Jayesh Phale' },
+      aud: 'authenticated',
+      created_at: new Date().toISOString(),
+    } as User)
+    setProfile(initialMockProfile)
+  }
+
   const signOut = async () => {
+    localStorage.removeItem('leadflow_crm_demo')
+    setIsDemoMode(false)
     if (isSupabaseConfigured) {
       await supabase.auth.signOut()
     }
@@ -97,7 +134,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         profile,
         loading,
         isConfigured: isSupabaseConfigured,
+        isDemoMode,
         signIn,
+        signInDemo,
         signOut,
         refreshProfile: fetchProfile,
       }}
