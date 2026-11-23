@@ -4,7 +4,7 @@ import { subDays, format } from 'date-fns'
 const today = new Date()
 const todayStr = format(today, 'yyyy-MM-dd')
 
-export const DATA_VERSION = 'v2_real_leads'
+export const DATA_VERSION = 'v3_course_sales_funnel'
 
 // Automatically clear outdated temp mock caches in browser localStorage
 if (typeof window !== 'undefined') {
@@ -99,6 +99,7 @@ export const initialMockLeads: Lead[] = [
     interest_status: 'New',
     call_status: 'Not Called',
     whatsapp_status: 'Not Sent',
+    funnel_stage: 'New Lead',
     closing_status: 'Not Scheduled',
     closing_notes: '',
     next_follow_up_date: todayStr,
@@ -122,6 +123,7 @@ export const initialMockLeads: Lead[] = [
     interest_status: 'New',
     call_status: 'Not Called',
     whatsapp_status: 'Not Sent',
+    funnel_stage: 'New Lead',
     closing_status: 'Not Scheduled',
     closing_notes: '',
     next_follow_up_date: todayStr,
@@ -145,6 +147,7 @@ export const initialMockLeads: Lead[] = [
     interest_status: 'Interested',
     call_status: 'Connected',
     whatsapp_status: 'Sent',
+    funnel_stage: 'Video Sent',
     closing_status: 'Scheduled',
     closing_notes: 'Scheduled for counseling call.',
     next_follow_up_date: todayStr,
@@ -168,6 +171,7 @@ export const initialMockLeads: Lead[] = [
     interest_status: 'High Intent',
     call_status: 'Connected',
     whatsapp_status: 'Replied',
+    funnel_stage: '15m Follow-up',
     closing_status: 'Follow-up Required',
     closing_notes: 'Discussing Prime and Infinity packages.',
     next_follow_up_date: todayStr,
@@ -191,6 +195,7 @@ export const initialMockLeads: Lead[] = [
     interest_status: 'New',
     call_status: 'Not Called',
     whatsapp_status: 'Not Sent',
+    funnel_stage: 'New Lead',
     closing_status: 'Not Scheduled',
     closing_notes: '',
     next_follow_up_date: null,
@@ -214,6 +219,7 @@ export const initialMockLeads: Lead[] = [
     interest_status: 'Interested',
     call_status: 'Connected',
     whatsapp_status: 'Replied',
+    funnel_stage: 'Seat Reserved',
     closing_status: 'Not Scheduled',
     closing_notes: '',
     next_follow_up_date: todayStr,
@@ -237,6 +243,7 @@ export const initialMockLeads: Lead[] = [
     interest_status: 'New',
     call_status: 'Not Called',
     whatsapp_status: 'Not Sent',
+    funnel_stage: 'New Lead',
     closing_status: 'Not Scheduled',
     closing_notes: '',
     next_follow_up_date: null,
@@ -260,6 +267,7 @@ export const initialMockLeads: Lead[] = [
     interest_status: 'New',
     call_status: 'Not Called',
     whatsapp_status: 'Not Sent',
+    funnel_stage: 'New Lead',
     closing_status: 'Not Scheduled',
     closing_notes: '',
     next_follow_up_date: null,
@@ -283,6 +291,7 @@ export const initialMockLeads: Lead[] = [
     interest_status: 'New',
     call_status: 'Not Called',
     whatsapp_status: 'Not Sent',
+    funnel_stage: 'New Lead',
     closing_status: 'Not Scheduled',
     closing_notes: '',
     next_follow_up_date: null,
@@ -306,6 +315,7 @@ export const initialMockLeads: Lead[] = [
     interest_status: 'Interested',
     call_status: 'Not Called',
     whatsapp_status: 'Not Sent',
+    funnel_stage: 'New Lead',
     closing_status: 'Not Scheduled',
     closing_notes: '',
     next_follow_up_date: todayStr,

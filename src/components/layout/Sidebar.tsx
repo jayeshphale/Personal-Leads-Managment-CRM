@@ -27,7 +27,7 @@ const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/leads', label: 'All Leads', icon: Users },
   { to: '/calling', label: 'Calling Tracker', icon: PhoneCall },
-  { to: '/whatsapp', label: 'WhatsApp Tracker', icon: MessageSquare },
+  { to: '/whatsapp', label: 'WhatsApp & Funnel', icon: MessageSquare },
   { to: '/workshops', label: 'Workshop Tracker', icon: Calendar },
   { to: '/enrollments', label: 'Course Enrollments', icon: GraduationCap },
   { to: '/reminders', label: 'Follow-up Reminders', icon: BellRing, hasBadge: true },

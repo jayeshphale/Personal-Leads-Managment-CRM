@@ -44,8 +44,18 @@ export const Badge: React.FC<BadgeProps> = ({
   )
 }
 
-export function getStatusBadge(type: 'call' | 'whatsapp' | 'interest' | 'attendance' | 'payment' | 'priority', value: string) {
+export function getStatusBadge(type: 'call' | 'whatsapp' | 'interest' | 'attendance' | 'payment' | 'priority' | 'funnel', value: string) {
   switch (type) {
+    case 'funnel':
+      if (value === 'Course Enrolled') return <Badge variant="green">🎓 Course Enrolled</Badge>
+      if (value === 'Workshop Attended') return <Badge variant="purple">🎟️ Workshop Attended</Badge>
+      if (value === 'Seat Reserved') return <Badge variant="green">✅ Seat Reserved</Badge>
+      if (value === 'Payment Pending (₹99)') return <Badge variant="yellow">💳 ₹99 Pending</Badge>
+      if (value === '15m Follow-up') return <Badge variant="orange">⏱️ 15m Follow-up</Badge>
+      if (value === 'Video Sent') return <Badge variant="blue">🎥 Video Sent</Badge>
+      if (value === 'Call Done') return <Badge variant="blue">📞 Call Done</Badge>
+      return <Badge variant="slate">🆕 New Lead</Badge>
+
     case 'call':
       if (value === 'Connected') return <Badge variant="green">{value}</Badge>
       if (value === 'No Answer') return <Badge variant="yellow">{value}</Badge>

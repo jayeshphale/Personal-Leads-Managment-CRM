@@ -60,6 +60,16 @@ export type ReminderStatus =
   | 'Completed'
   | 'Cancelled'
 
+export type FunnelStage =
+  | 'New Lead'
+  | 'Call Done'
+  | 'Video Sent'
+  | '15m Follow-up'
+  | 'Payment Pending (₹99)'
+  | 'Seat Reserved'
+  | 'Workshop Attended'
+  | 'Course Enrolled'
+
 export interface Profile {
   id: string
   email: string
@@ -110,6 +120,10 @@ export interface Lead {
   closing_status: ClosingStatus
   closing_notes?: string
   closing_notes_images?: string[]
+  funnel_stage?: FunnelStage
+  is_number_saved?: boolean
+  video_sent_at?: string
+  payment_99_screenshot?: string
   next_follow_up_date?: string | null
   created_at: string
   updated_at: string
