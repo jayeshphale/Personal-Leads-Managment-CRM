@@ -1,6 +1,7 @@
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import type { DashboardMetrics, DateFilter } from '@/types/crm.types'
 import { subDays, startOfDay, endOfDay, startOfMonth, endOfMonth, parseISO, format } from 'date-fns'
+import { initialMockWorkshops } from '@/lib/mockData'
 
 function getDateRange(filter: DateFilter): { start: string; end: string } {
   const now = new Date()
@@ -40,6 +41,8 @@ function calculateLocalMetrics(): DashboardMetrics {
   const leads = storedLeads ? JSON.parse(storedLeads) : []
   const storedEnrs = localStorage.getItem('mock_enrollments')
   const enrollments = storedEnrs ? JSON.parse(storedEnrs) : []
+  const storedRegs = localStorage.getItem('mock_workshop_registrations')
+  const workshopRegs = storedRegs ? JSON.parse(storedRegs) : []
 
   const totalLeads = leads.length
   const newLeads = leads.filter((l: any) => l.interest_status === 'New').length
@@ -52,14 +55,18 @@ function calculateLocalMetrics(): DashboardMetrics {
     .filter((e: any) => ['Paid', 'Partial'].includes(e.payment_status))
     .reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0)
 
+  // Real workshop metrics computed from candidate registrations
+  const workshopEnrolled = workshopRegs.length
+  const workshopAttended = workshopRegs.filter((r: any) => r.attendance_status === 'Attended').length
+
   return {
     totalLeads,
     newLeads,
     interestedLeads,
     callsConnected,
     whatsappReplied,
-    workshopEnrolled: 13,
-    workshopAttended: 9,
+    workshopEnrolled,
+    workshopAttended,
     closingCallsCompleted,
     totalEnrollments,
     totalRevenue,
@@ -146,17 +153,35 @@ export async function getFunnelData(dateFilter: DateFilter) {
 }
 
 export async function getDailyCallingActivity(days: number = 7) {
+  const storedActs = localStorage.getItem('mock_activities')
+  const activities = storedActs ? JSON.parse(storedActs) : []
+  const storedLeads = localStorage.getItem('mock_leads')
+  const leads = storedLeads ? JSON.parse(storedLeads) : []
+
   const result: { date: string; displayDate: string; connected: number; attempted: number }[] = []
   for (let i = days - 1; i >= 0; i--) {
     const d = subDays(new Date(), i)
     const dateKey = format(d, 'yyyy-MM-dd')
     const displayDate = format(d, 'dd MMM')
-    const seed = (i * 3 + 4) % 6
+
+    // Count real logged calls for this day from activity logs
+    const dayActs = activities.filter((a: any) => a.created_at?.startsWith(dateKey))
+    let connected = dayActs.filter((a: any) => a.activity_type === 'Call Connected').length
+    let attempted = dayActs.filter((a: any) => a.activity_type === 'Call Attempted').length
+
+    // For current day, ensure active call status counts from leads are included
+    if (i === 0) {
+      const connLeads = leads.filter((l: any) => l.call_status === 'Connected').length
+      const attLeads = leads.filter((l: any) => ['No Answer', 'Busy'].includes(l.call_status)).length
+      connected = Math.max(connected, connLeads)
+      attempted = Math.max(attempted, attLeads)
+    }
+
     result.push({
       date: dateKey,
       displayDate,
-      connected: seed > 1 ? seed - 1 : 1,
-      attempted: seed + 3,
+      connected,
+      attempted,
     })
   }
   return result
@@ -221,8 +246,73 @@ export async function getPackageEnrollmentStats() {
 }
 
 export async function getWorkshopConversionStats() {
-  return [
-    { id: 'ws-1', title: 'Full-Stack Architecture Masterclass', date: '25 Nov', registered: 12, attended: 9, rate: 75 },
-    { id: 'ws-2', title: 'Python & AI Engineering Bootcamp', date: '20 Nov', registered: 18, attended: 14, rate: 78 },
-  ]
+  const calculateLocalWorkshopStats = () => {
+    const storedWorkshops = localStorage.getItem('mock_workshops')
+    const workshops = storedWorkshops ? JSON.parse(storedWorkshops) : initialMockWorkshops
+    const storedRegs = localStorage.getItem('mock_workshop_registrations')
+    const allRegs = storedRegs ? JSON.parse(storedRegs) : []
+
+    if (!workshops || workshops.length === 0) return []
+
+    return workshops.map((w: any) => {
+      const regs = allRegs.filter((r: any) => r.workshop_id === w.id)
+      const registered = regs.length
+      const attended = regs.filter((r: any) => r.attendance_status === 'Attended').length
+      const rate = registered > 0 ? Math.round((attended / registered) * 100) : 0
+      const displayTitle = w.title.length > 28 ? `${w.title.slice(0, 25)}...` : w.title
+
+      return {
+        id: w.id,
+        title: displayTitle,
+        fullTitle: w.title,
+        date: w.workshop_date ? format(parseISO(w.workshop_date), 'dd MMM') : 'Scheduled',
+        registered,
+        attended,
+        rate,
+      }
+    })
+  }
+
+  if (!isSupabaseConfigured) {
+    return calculateLocalWorkshopStats()
+  }
+
+  try {
+    const { data: workshops, error: wError } = await supabase
+      .from('workshops')
+      .select(`
+        id,
+        title,
+        workshop_date,
+        workshop_registrations (
+          id,
+          attendance_status
+        )
+      `)
+      .order('workshop_date', { ascending: false })
+
+    if (wError || !workshops || workshops.length === 0) {
+      return calculateLocalWorkshopStats()
+    }
+
+    return workshops.map((w: any) => {
+      const regs = w.workshop_registrations || []
+      const registered = regs.length
+      const attended = regs.filter((r: any) => r.attendance_status === 'Attended').length
+      const rate = registered > 0 ? Math.round((attended / registered) * 100) : 0
+      const displayTitle = w.title.length > 28 ? `${w.title.slice(0, 25)}...` : w.title
+
+      return {
+        id: w.id,
+        title: displayTitle,
+        fullTitle: w.title,
+        date: w.workshop_date ? format(parseISO(w.workshop_date), 'dd MMM') : 'Scheduled',
+        registered,
+        attended,
+        rate,
+      }
+    })
+  } catch {
+    return calculateLocalWorkshopStats()
+  }
 }
