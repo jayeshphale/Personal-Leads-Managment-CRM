@@ -20,6 +20,47 @@ function saveLocalWorkshops(ws: Workshop[]) {
   localStorage.setItem('mock_workshops', JSON.stringify(ws))
 }
 
+function getLocalWorkshopRegistrations(): WorkshopRegistration[] {
+  const stored = localStorage.getItem('mock_workshop_registrations')
+  if (!stored) {
+    const ws = getLocalWorkshops()
+    const storedLeads = localStorage.getItem('mock_leads')
+    const leads = storedLeads ? JSON.parse(storedLeads) : []
+    const sampleRegs: WorkshopRegistration[] = []
+
+    ws.forEach((w) => {
+      leads.forEach((l: any, idx: number) => {
+        if (idx < 5) {
+          sampleRegs.push({
+            id: `reg-${w.id}-${l.id}`,
+            owner_id: 'owner-uuid-1',
+            workshop_id: w.id,
+            lead_id: l.id,
+            attendance_status: idx % 2 === 0 ? 'Attended' : 'Pending',
+            attendance_date: idx % 2 === 0 ? new Date().toISOString() : null,
+            notes: 'RSVP confirmed',
+            registered_at: new Date().toISOString(),
+            workshop: w,
+            lead: l,
+          })
+        }
+      })
+    })
+
+    localStorage.setItem('mock_workshop_registrations', JSON.stringify(sampleRegs))
+    return sampleRegs
+  }
+  try {
+    return JSON.parse(stored)
+  } catch {
+    return []
+  }
+}
+
+function saveLocalWorkshopRegistrations(regs: WorkshopRegistration[]) {
+  localStorage.setItem('mock_workshop_registrations', JSON.stringify(regs))
+}
+
 export async function getWorkshops() {
   if (!isSupabaseConfigured) {
     return getLocalWorkshops()
@@ -182,15 +223,15 @@ export async function deleteWorkshop(id: string) {
 
 export async function getWorkshopRegistrations(workshopId: string) {
   const localGet = () => {
-    const stored = localStorage.getItem(`mock_regs_${workshopId}`)
-    if (stored) {
-      try {
-        return JSON.parse(stored)
-      } catch {}
-    }
+    const allRegs = getLocalWorkshopRegistrations()
+    const filtered = allRegs.filter((r) => r.workshop_id === workshopId)
+    if (filtered.length > 0) return filtered
 
     const storedLeads = localStorage.getItem('mock_leads')
     const leads = storedLeads ? JSON.parse(storedLeads) : []
+    const ws = getLocalWorkshops()
+    const w = ws.find((item) => item.id === workshopId) || ws[0]
+
     const sampleRegs: WorkshopRegistration[] = leads.slice(0, 3).map((l: any, idx: number) => ({
       id: `reg-${workshopId}-${l.id}`,
       owner_id: 'owner-uuid-1',
@@ -200,9 +241,10 @@ export async function getWorkshopRegistrations(workshopId: string) {
       attendance_date: idx === 0 ? new Date().toISOString() : null,
       notes: 'RSVP confirmed',
       registered_at: new Date().toISOString(),
+      workshop: w,
       lead: l,
     }))
-    localStorage.setItem(`mock_regs_${workshopId}`, JSON.stringify(sampleRegs))
+    saveLocalWorkshopRegistrations([...allRegs, ...sampleRegs])
     return sampleRegs
   }
 
@@ -228,7 +270,7 @@ export async function getWorkshopRegistrations(workshopId: string) {
       .eq('workshop_id', workshopId)
       .order('registered_at', { ascending: false })
 
-    if (error || !data) return localGet()
+    if (error || !data || data.length === 0) return localGet()
     return (data as WorkshopRegistration[]) || []
   } catch {
     return localGet()
@@ -241,7 +283,9 @@ export async function registerCandidateForWorkshop(
   notes?: string
 ) {
   const localRegister = async () => {
-    const regs = await getWorkshopRegistrations(workshopId)
+    const allRegs = getLocalWorkshopRegistrations()
+    const ws = getLocalWorkshops()
+    const w = ws.find((item) => item.id === workshopId) || ws[0]
     const storedLeads = localStorage.getItem('mock_leads')
     const leads = storedLeads ? JSON.parse(storedLeads) : []
     const lead = leads.find((l: any) => l.id === leadId)
@@ -255,14 +299,15 @@ export async function registerCandidateForWorkshop(
       attendance_date: null,
       notes: notes || '',
       registered_at: new Date().toISOString(),
+      workshop: w,
       lead,
     }
-    localStorage.setItem(`mock_regs_${workshopId}`, JSON.stringify([newReg, ...regs]))
+    saveLocalWorkshopRegistrations([newReg, ...allRegs])
 
     await logActivity({
       lead_id: leadId,
       activity_type: 'Workshop Registered',
-      new_value: 'Workshop Session',
+      new_value: w ? w.title : 'Workshop Session',
       notes,
     })
     return newReg
@@ -298,6 +343,8 @@ export async function registerCandidateForWorkshop(
       notes,
     })
 
+    localRegister()
+
     return reg as WorkshopRegistration
   } catch {
     return localRegister()
@@ -310,14 +357,52 @@ export async function updateAttendanceStatus(
   status: AttendanceStatus,
   notes?: string
 ) {
-  if (!isSupabaseConfigured) {
+  const localUpdate = async () => {
+    const allRegs = getLocalWorkshopRegistrations()
+    let found = false
+    const updated = allRegs.map((r) => {
+      if (r.id === registrationId || (r.lead_id === leadId && r.workshop_id === registrationId)) {
+        found = true
+        return {
+          ...r,
+          attendance_status: status,
+          attendance_date: status === 'Attended' ? new Date().toISOString() : null,
+          notes: notes !== undefined ? notes : r.notes,
+        }
+      }
+      return r
+    })
+
+    if (!found) {
+      const ws = getLocalWorkshops()
+      const w = ws.find((item) => item.id === registrationId) || ws[0]
+      updated.unshift({
+        id: registrationId,
+        owner_id: 'owner-uuid-1',
+        workshop_id: w ? w.id : registrationId,
+        lead_id: leadId,
+        attendance_status: status,
+        attendance_date: status === 'Attended' ? new Date().toISOString() : null,
+        notes: notes || '',
+        registered_at: new Date().toISOString(),
+        workshop: w,
+      })
+    }
+
+    saveLocalWorkshopRegistrations(updated)
+
     await logActivity({
       lead_id: leadId,
       activity_type: status === 'Attended' ? 'Workshop Attended' : 'Workshop Attendance Updated',
       new_value: status,
       notes,
     })
-    return {} as any
+
+    return { id: registrationId, attendance_status: status }
+  }
+
+  if (!isSupabaseConfigured) {
+    return localUpdate()
   }
 
   try {
@@ -335,13 +420,7 @@ export async function updateAttendanceStatus(
       .single()
 
     if (error || !data) {
-      await logActivity({
-        lead_id: leadId,
-        activity_type: status === 'Attended' ? 'Workshop Attended' : 'Workshop Attendance Updated',
-        new_value: status,
-        notes,
-      })
-      return {} as any
+      return localUpdate()
     }
 
     const reg = data as any
@@ -352,31 +431,36 @@ export async function updateAttendanceStatus(
       notes: `${reg.workshop?.title || ''} - ${notes || ''}`.trim(),
     })
 
+    localUpdate()
+
     return reg as WorkshopRegistration
   } catch {
-    await logActivity({
-      lead_id: leadId,
-      activity_type: status === 'Attended' ? 'Workshop Attended' : 'Workshop Attendance Updated',
-      new_value: status,
-      notes,
-    })
-    return {} as any
+    return localUpdate()
   }
 }
 
 export async function getLeadWorkshopRegistrations(leadId: string) {
   const localGet = () => {
+    const allRegs = getLocalWorkshopRegistrations()
+    const matching = allRegs.filter((r) => r.lead_id === leadId)
+    if (matching.length > 0) return matching
+
     const ws = getLocalWorkshops()
-    return ws.slice(0, 1).map((w) => ({
-      id: `reg-${w.id}-${leadId}`,
-      owner_id: 'owner-uuid-1',
-      workshop_id: w.id,
-      lead_id: leadId,
-      attendance_status: 'Attended' as AttendanceStatus,
-      attendance_date: new Date().toISOString(),
-      registered_at: new Date().toISOString(),
-      workshop: w,
-    }))
+    if (ws.length > 0) {
+      const defaultReg: WorkshopRegistration = {
+        id: `reg-${ws[0].id}-${leadId}`,
+        owner_id: 'owner-uuid-1',
+        workshop_id: ws[0].id,
+        lead_id: leadId,
+        attendance_status: 'Attended',
+        attendance_date: new Date().toISOString(),
+        registered_at: new Date().toISOString(),
+        workshop: ws[0],
+      }
+      saveLocalWorkshopRegistrations([defaultReg, ...allRegs])
+      return [defaultReg]
+    }
+    return []
   }
 
   if (!isSupabaseConfigured) {
@@ -399,7 +483,7 @@ export async function getLeadWorkshopRegistrations(leadId: string) {
       .eq('lead_id', leadId)
       .order('registered_at', { ascending: false })
 
-    if (error || !data) return localGet()
+    if (error || !data || data.length === 0) return localGet()
     return (data as WorkshopRegistration[]) || []
   } catch {
     return localGet()

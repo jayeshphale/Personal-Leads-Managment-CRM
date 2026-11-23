@@ -69,13 +69,20 @@ export const WorkshopSection: React.FC<WorkshopSectionProps> = ({ lead, onLeadUp
   }
 
   const handleUpdateAttendance = async (regId: string, status: AttendanceStatus) => {
+    // 1. Immediate optimistic state update for instant UI feedback
+    setRegistrations((prev) =>
+      prev.map((r) =>
+        r.id === regId ? { ...r, attendance_status: status } : r
+      )
+    )
+
     try {
       await updateAttendanceStatus(regId, lead.id, status)
       success('Attendance Updated', `Attendance marked as ${status}.`)
-      loadData()
       onLeadUpdated()
     } catch (err: any) {
       error('Failed to update attendance', err.message)
+      loadData()
     }
   }
 

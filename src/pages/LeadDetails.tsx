@@ -8,11 +8,6 @@ import {
   Calendar,
   Edit,
   Trash2,
-  ExternalLink,
-  Phone,
-  MessageSquare,
-  Clock,
-  UserCheck
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PersonalInfoSection } from '@/components/profile/PersonalInfoSection'
@@ -35,29 +30,29 @@ export const LeadDetails: React.FC = () => {
 
   const [lead, setLead] = useState<Lead | null>(null)
   const [activities, setActivities] = useState<LeadActivity[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [isInitialLoading, setIsInitialLoading] = useState(true)
 
   // Modals
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [isReminderModalOpen, setIsReminderModalOpen] = useState(false)
 
-  const loadLeadData = async () => {
+  const loadLeadData = async (silent: boolean = false) => {
     if (!id) return
     try {
-      setIsLoading(true)
+      if (!silent) setIsInitialLoading(true)
       const [l, acts] = await Promise.all([getLeadById(id), getActivitiesByLeadId(id)])
       setLead(l)
       setActivities(acts)
     } catch (err: any) {
       error('Failed to load candidate', err.message)
     } finally {
-      setIsLoading(false)
+      if (!silent) setIsInitialLoading(false)
     }
   }
 
   useEffect(() => {
-    loadLeadData()
+    loadLeadData(false)
   }, [id])
 
   const handleDelete = async () => {
@@ -71,7 +66,8 @@ export const LeadDetails: React.FC = () => {
     }
   }
 
-  if (isLoading) {
+  // Full-page spinner only on initial load so status updates don't flicker/refresh the screen
+  if (isInitialLoading) {
     return (
       <div className="py-24 text-center">
         <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3" />
@@ -118,7 +114,7 @@ export const LeadDetails: React.FC = () => {
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
               Candidate ID: <span className="font-mono">{lead.id.slice(0, 8)}</span> • Source:{' '}
-              <span className="font-semibold text-slate-700">{lead.lead_source}</span>
+              <span className="font-medium text-slate-700">{lead.lead_source}</span>
             </p>
           </div>
         </div>
@@ -162,68 +158,59 @@ export const LeadDetails: React.FC = () => {
           <PersonalInfoSection
             lead={lead}
             onEdit={() => setIsEditModalOpen(true)}
-            onLeadUpdated={loadLeadData}
+            onLeadUpdated={() => loadLeadData(true)}
           />
 
           {/* Section B: Calling Tracking */}
-          <CallingSection lead={lead} onLeadUpdated={loadLeadData} />
+          <CallingSection lead={lead} onLeadUpdated={() => loadLeadData(true)} />
 
-          {/* Section C: WhatsApp Tracking */}
-          <WhatsAppSection lead={lead} onLeadUpdated={loadLeadData} />
+          {/* Section C: WhatsApp Communication */}
+          <WhatsAppSection lead={lead} onLeadUpdated={() => loadLeadData(true)} />
 
-          {/* Section D: Workshop Tracking */}
-          <WorkshopSection lead={lead} onLeadUpdated={loadLeadData} />
+          {/* Section D: Workshop Attendance Tracking */}
+          <WorkshopSection lead={lead} onLeadUpdated={() => loadLeadData(true)} />
 
-          {/* Section E: Closing Call */}
-          <ClosingCallSection lead={lead} onLeadUpdated={loadLeadData} />
+          {/* Section E: Closing Call Tracking */}
+          <ClosingCallSection lead={lead} onLeadUpdated={() => loadLeadData(true)} />
 
-          {/* Section F: Course Enrollment */}
-          <EnrollmentSection lead={lead} onLeadUpdated={loadLeadData} />
+          {/* Section F: Course Enrollment & Billing */}
+          <EnrollmentSection lead={lead} onLeadUpdated={() => loadLeadData(true)} />
         </div>
 
-        {/* Right One-Third: Section G Chronological Activity Timeline */}
+        {/* Right One-Third: Chronological Activity Timeline */}
         <div className="space-y-6">
           <ActivityTimelineSection activities={activities} />
         </div>
       </div>
 
-      {/* Edit Lead Modal */}
-      {isEditModalOpen && (
-        <LeadModal
-          isOpen={isEditModalOpen}
-          leadToEdit={lead}
-          onClose={() => setIsEditModalOpen(false)}
-          onSuccess={() => {
-            setIsEditModalOpen(false)
-            loadLeadData()
-            success('Profile Updated', 'Candidate profile updated successfully.')
-          }}
-        />
-      )}
+      {/* Modals */}
+      <LeadModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        leadToEdit={lead}
+        onSuccess={() => {
+          setIsEditModalOpen(false)
+          loadLeadData(true)
+        }}
+      />
 
-      {/* Delete Lead Modal */}
-      {isDeleteModalOpen && (
-        <DeleteConfirmModal
-          isOpen={isDeleteModalOpen}
-          onClose={() => setIsDeleteModalOpen(false)}
-          onConfirm={handleDelete}
-          title={`Delete ${fullName}?`}
-          description="Are you sure you want to delete this candidate? All associated call notes, workshop registrations, and enrollment transactions will be permanently deleted."
-        />
-      )}
+      <DeleteConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        title={`Delete ${fullName}?`}
+        onConfirm={handleDelete}
+      />
 
-      {/* Add Reminder Modal */}
-      {isReminderModalOpen && (
-        <AddReminderModal
-          isOpen={isReminderModalOpen}
-          onClose={() => setIsReminderModalOpen(false)}
-          leadId={lead.id}
-          candidateName={fullName}
-          onSuccess={() => {
-            loadLeadData()
-          }}
-        />
-      )}
+      <AddReminderModal
+        isOpen={isReminderModalOpen}
+        onClose={() => setIsReminderModalOpen(false)}
+        leadId={lead.id}
+        candidateName={fullName}
+        onSuccess={() => {
+          setIsReminderModalOpen(false)
+          loadLeadData(true)
+        }}
+      />
     </div>
   )
 }
