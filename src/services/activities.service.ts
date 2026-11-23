@@ -25,6 +25,7 @@ export interface LogActivityParams {
   old_value?: string | null
   new_value?: string | null
   notes?: string | null
+  images?: string[]
 }
 
 export async function logActivity(params: LogActivityParams) {
@@ -39,6 +40,7 @@ export async function logActivity(params: LogActivityParams) {
         old_value: params.old_value || null,
         new_value: params.new_value || null,
         notes: params.notes || null,
+        images: params.images || [],
         created_at: new Date().toISOString(),
       }
       saveLocalActivities([newAct, ...acts])
@@ -57,6 +59,7 @@ export async function logActivity(params: LogActivityParams) {
         old_value: params.old_value || null,
         new_value: params.new_value || null,
         notes: params.notes || null,
+        images: params.images || [],
       })
       .select()
       .single()

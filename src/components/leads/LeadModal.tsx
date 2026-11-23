@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { leadSchema, type LeadFormData } from '@/lib/validations/lead.schema'
@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { createLead, updateLead } from '@/services/leads.service'
 import type { Lead, Qualification, InterestStatus, CallStatus, WhatsAppStatus, ClosingStatus } from '@/types/crm.types'
+import { ScreenshotAttachment } from '@/components/common/ScreenshotAttachment'
 
 interface LeadModalProps {
   isOpen: boolean
@@ -53,6 +54,8 @@ export const LeadModal: React.FC<LeadModalProps> = ({
   leadToEdit,
   onSuccess,
 }) => {
+  const [notesImages, setNotesImages] = useState<string[]>([])
+
   const {
     register,
     handleSubmit,
@@ -80,6 +83,7 @@ export const LeadModal: React.FC<LeadModalProps> = ({
 
   useEffect(() => {
     if (leadToEdit) {
+      setNotesImages(leadToEdit.notes_images || [])
       reset({
         first_name: leadToEdit.first_name,
         last_name: leadToEdit.last_name || '',
@@ -100,6 +104,7 @@ export const LeadModal: React.FC<LeadModalProps> = ({
         next_follow_up_date: leadToEdit.next_follow_up_date || undefined,
       })
     } else {
+      setNotesImages([])
       reset({
         first_name: '',
         last_name: '',
@@ -121,10 +126,14 @@ export const LeadModal: React.FC<LeadModalProps> = ({
 
   const onSubmit = async (data: LeadFormData) => {
     try {
+      const payload = {
+        ...data,
+        notes_images: notesImages,
+      }
       if (leadToEdit) {
-        await updateLead(leadToEdit.id, data as Partial<Lead>, leadToEdit)
+        await updateLead(leadToEdit.id, payload as Partial<Lead>, leadToEdit)
       } else {
-        await createLead(data as Partial<Lead>)
+        await createLead(payload as Partial<Lead>)
       }
       onSuccess()
     } catch (err: any) {
@@ -280,6 +289,14 @@ export const LeadModal: React.FC<LeadModalProps> = ({
             className="w-full rounded-lg border border-slate-300 p-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs"
           />
         </div>
+
+        {/* Screenshot Attachment */}
+        <ScreenshotAttachment
+          images={notesImages}
+          onChange={setNotesImages}
+          label="Candidate Notes Screenshots"
+          helperText="Upload, drag & drop, or paste (Ctrl+V) screenshots directly"
+        />
 
         {/* Modal Actions */}
         <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">

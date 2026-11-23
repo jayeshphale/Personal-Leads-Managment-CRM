@@ -7,6 +7,7 @@ import { updateLead } from '@/services/leads.service'
 import { logActivity } from '@/services/activities.service'
 import { useToast } from '@/components/ui/toast'
 import { Badge } from '@/components/ui/badge'
+import { ScreenshotAttachment } from '@/components/common/ScreenshotAttachment'
 
 interface ClosingCallSectionProps {
   lead: Lead
@@ -24,6 +25,7 @@ export const ClosingCallSection: React.FC<ClosingCallSectionProps> = ({ lead, on
   const { success, error } = useToast()
   const [closingStatus, setClosingStatus] = useState<ClosingStatus>(lead.closing_status)
   const [closingNotes, setClosingNotes] = useState(lead.closing_notes || '')
+  const [closingImages, setClosingImages] = useState<string[]>(lead.closing_notes_images || [])
   const [isUpdating, setIsUpdating] = useState(false)
 
   const handleSave = async (e: React.FormEvent) => {
@@ -35,6 +37,7 @@ export const ClosingCallSection: React.FC<ClosingCallSectionProps> = ({ lead, on
         {
           closing_status: closingStatus,
           closing_notes: closingNotes,
+          closing_notes_images: closingImages,
         },
         lead
       )
@@ -46,6 +49,7 @@ export const ClosingCallSection: React.FC<ClosingCallSectionProps> = ({ lead, on
         old_value: lead.closing_status,
         new_value: closingStatus,
         notes: closingNotes,
+        images: closingImages.length > 0 ? closingImages : undefined,
       })
 
       success('Closing Call Updated', `Status saved as ${closingStatus}.`)
@@ -118,6 +122,13 @@ export const ClosingCallSection: React.FC<ClosingCallSectionProps> = ({ lead, on
               className="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs"
             />
           </div>
+
+          <ScreenshotAttachment
+            images={closingImages}
+            onChange={setClosingImages}
+            label="Closing Call & Offer Screenshots"
+            compact
+          />
 
           <div className="flex justify-end pt-1">
             <Button type="submit" size="sm" isLoading={isUpdating}>

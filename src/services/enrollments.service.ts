@@ -143,6 +143,7 @@ export async function createEnrollment(params: {
   amount: number
   payment_status: PaymentStatus
   notes?: string
+  receipt_images?: string[]
 }) {
   const localCreate = async () => {
     const enrs = getLocalEnrollments()
@@ -160,6 +161,7 @@ export async function createEnrollment(params: {
       amount: params.amount,
       payment_status: params.payment_status,
       notes: params.notes || '',
+      receipt_images: params.receipt_images || [],
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       lead,
@@ -171,6 +173,7 @@ export async function createEnrollment(params: {
       activity_type: 'Course Enrolled',
       new_value: `${params.package_name} (₹${params.amount} - ${params.payment_status})`,
       notes: params.notes,
+      images: params.receipt_images || [],
     })
     return newEnr
   }
@@ -206,6 +209,7 @@ export async function createEnrollment(params: {
       activity_type: 'Course Enrolled',
       new_value: `${params.package_name} (₹${params.amount} - ${params.payment_status})`,
       notes: params.notes,
+      images: params.receipt_images || [],
     })
 
     return created

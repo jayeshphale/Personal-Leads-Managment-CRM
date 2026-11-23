@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import type { Lead, Workshop, WorkshopRegistration, AttendanceStatus } from '@/types/crm.types'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Calendar, Plus, CheckCircle, XCircle, Clock } from 'lucide-react'
+import { Calendar, Plus, CheckCircle, XCircle, Clock, Image as ImageIcon, ZoomIn, Download, X } from 'lucide-react'
 import { getStatusBadge } from '@/components/ui/badge'
 import { formatDateSafe } from '@/lib/utils'
 import {
@@ -13,6 +13,7 @@ import {
 } from '@/services/workshops.service'
 import { useToast } from '@/components/ui/toast'
 import { Dialog } from '@/components/ui/dialog'
+import { ScreenshotAttachment } from '@/components/common/ScreenshotAttachment'
 
 interface WorkshopSectionProps {
   lead: Lead
@@ -26,7 +27,9 @@ export const WorkshopSection: React.FC<WorkshopSectionProps> = ({ lead, onLeadUp
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false)
   const [selectedWorkshopId, setSelectedWorkshopId] = useState('')
   const [regNotes, setRegNotes] = useState('')
+  const [regImages, setRegImages] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [activePreview, setActivePreview] = useState<string | null>(null)
 
   const loadData = async () => {
     try {
@@ -55,6 +58,7 @@ export const WorkshopSection: React.FC<WorkshopSectionProps> = ({ lead, onLeadUp
       success('Workshop Registered', 'Candidate has been registered for this workshop.')
       setIsRegisterModalOpen(false)
       setRegNotes('')
+      setRegImages([])
       loadData()
       onLeadUpdated()
     } catch (err: any) {
@@ -80,72 +84,84 @@ export const WorkshopSection: React.FC<WorkshopSectionProps> = ({ lead, onLeadUp
       <CardHeader className="flex flex-row items-center justify-between py-4">
         <CardTitle className="text-sm font-semibold flex items-center gap-2">
           <Calendar className="w-4 h-4 text-purple-600" />
-          Workshop Attendance & Registrations
+          Workshop Attendance Tracking
         </CardTitle>
-        <Button size="sm" variant="outline" onClick={() => setIsRegisterModalOpen(true)}>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setIsRegisterModalOpen(true)}
+          className="text-xs"
+        >
           <Plus className="w-3.5 h-3.5 mr-1" />
           Register for Workshop
         </Button>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent>
         {registrations.length === 0 ? (
-          <div className="py-6 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-lg">
-            Candidate is not registered for any workshop yet.
+          <div className="text-center py-6 border border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+            <Calendar className="w-8 h-8 text-slate-300 mx-auto mb-1.5" />
+            <p className="text-xs font-semibold text-slate-700">No Workshop Registrations</p>
+            <p className="text-[11px] text-slate-400 max-w-xs mx-auto mt-0.5">
+              Register this candidate into an upcoming webinar or live workshop to build high purchase intent.
+            </p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {registrations.map((reg) => (
               <div
                 key={reg.id}
-                className="p-3.5 rounded-lg border border-slate-200/80 bg-slate-50/50 flex flex-wrap items-center justify-between gap-3 text-xs"
+                className="p-3.5 rounded-xl border border-slate-200/90 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs"
               >
                 <div>
-                  <h4 className="font-semibold text-slate-900 text-sm">
-                    {reg.workshop?.title || 'Workshop'}
-                  </h4>
-                  <div className="flex items-center gap-3 text-slate-500 mt-1">
-                    <span>Date: {formatDateSafe(reg.workshop?.workshop_date)}</span>
-                    <span>•</span>
-                    <span>Link/Venue: {reg.workshop?.location_or_link || 'Online'}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-slate-400">Attendance:</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-slate-900 text-xs">
+                      {reg.workshop?.title || 'Live Workshop Masterclass'}
+                    </span>
                     {getStatusBadge('attendance', reg.attendance_status)}
                   </div>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Date:{' '}
+                    {reg.workshop?.workshop_date
+                      ? formatDateSafe(reg.workshop.workshop_date)
+                      : 'Scheduled Session'}
+                    {reg.notes && <span className="ml-2 italic text-slate-600">— "{reg.notes}"</span>}
+                  </p>
+                </div>
 
-                  {/* Attendance Toggle Buttons */}
-                  <div className="flex items-center gap-1 bg-white p-1 rounded-md border border-slate-200">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-slate-400 font-medium">Mark Attendance:</span>
+                  <div className="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-50 gap-0.5">
                     <button
+                      type="button"
                       onClick={() => handleUpdateAttendance(reg.id, 'Attended')}
-                      className={`px-2 py-1 rounded text-[11px] font-medium transition-colors ${
+                      className={`px-2 py-1 text-[11px] font-medium rounded-md transition-colors cursor-pointer ${
                         reg.attendance_status === 'Attended'
-                          ? 'bg-emerald-600 text-white'
-                          : 'text-slate-600 hover:bg-slate-100'
+                          ? 'bg-emerald-600 text-white shadow-2xs'
+                          : 'text-slate-600 hover:text-emerald-700 hover:bg-emerald-50'
                       }`}
-                      title="Mark Attended"
+                      title="Mark as Attended"
                     >
                       Attended
                     </button>
                     <button
+                      type="button"
                       onClick={() => handleUpdateAttendance(reg.id, 'Absent')}
-                      className={`px-2 py-1 rounded text-[11px] font-medium transition-colors ${
+                      className={`px-2 py-1 text-[11px] font-medium rounded-md transition-colors cursor-pointer ${
                         reg.attendance_status === 'Absent'
-                          ? 'bg-rose-600 text-white'
-                          : 'text-slate-600 hover:bg-slate-100'
+                          ? 'bg-rose-600 text-white shadow-2xs'
+                          : 'text-slate-600 hover:text-rose-700 hover:bg-rose-50'
                       }`}
-                      title="Mark Absent"
+                      title="Mark as Absent"
                     >
                       Absent
                     </button>
                     <button
+                      type="button"
                       onClick={() => handleUpdateAttendance(reg.id, 'Pending')}
-                      className={`px-2 py-1 rounded text-[11px] font-medium transition-colors ${
+                      className={`px-2 py-1 text-[11px] font-medium rounded-md transition-colors cursor-pointer ${
                         reg.attendance_status === 'Pending'
-                          ? 'bg-amber-600 text-white'
-                          : 'text-slate-600 hover:bg-slate-100'
+                          ? 'bg-amber-600 text-white shadow-2xs'
+                          : 'text-slate-600 hover:text-amber-700 hover:bg-amber-50'
                       }`}
                       title="Reset to Pending"
                     >
@@ -164,7 +180,7 @@ export const WorkshopSection: React.FC<WorkshopSectionProps> = ({ lead, onLeadUp
         isOpen={isRegisterModalOpen}
         onClose={() => setIsRegisterModalOpen(false)}
         title="Register Candidate for Workshop"
-        description="Select an upcoming workshop session to enrol this candidate."
+        description="Select an upcoming workshop session and attach RSVP/chat screenshots."
         maxWidth="md"
       >
         <form onSubmit={handleRegister} className="space-y-4">
@@ -175,7 +191,7 @@ export const WorkshopSection: React.FC<WorkshopSectionProps> = ({ lead, onLeadUp
             <select
               value={selectedWorkshopId}
               onChange={(e) => setSelectedWorkshopId(e.target.value)}
-              className="w-full h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs"
+              className="w-full h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs cursor-pointer"
             >
               {availableWorkshops.map((w) => (
                 <option key={w.id} value={w.id}>
@@ -193,10 +209,17 @@ export const WorkshopSection: React.FC<WorkshopSectionProps> = ({ lead, onLeadUp
               value={regNotes}
               onChange={(e) => setRegNotes(e.target.value)}
               rows={2}
-              placeholder="e.g. Requested evening slot link"
+              placeholder="e.g. Requested evening slot link, WhatsApp RSVP confirmed"
               className="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs"
             />
           </div>
+
+          <ScreenshotAttachment
+            images={regImages}
+            onChange={setRegImages}
+            label="Registration Confirmation / Chat Screenshots"
+            compact
+          />
 
           <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
             <Button
@@ -212,6 +235,48 @@ export const WorkshopSection: React.FC<WorkshopSectionProps> = ({ lead, onLeadUp
           </div>
         </form>
       </Dialog>
+
+      {/* Lightbox Preview Modal */}
+      {activePreview && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4 animate-in fade-in duration-200"
+          onClick={() => setActivePreview(null)}
+        >
+          <div
+            className="relative max-w-4xl max-h-[90vh] bg-slate-900 rounded-xl overflow-hidden border border-slate-700 shadow-2xl flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-4 py-2.5 bg-slate-800 text-white border-b border-slate-700 text-xs">
+              <span className="font-semibold flex items-center gap-1.5">
+                <ImageIcon className="w-4 h-4 text-purple-400" /> Workshop Screenshot
+              </span>
+              <div className="flex items-center gap-2">
+                <a
+                  href={activePreview}
+                  download="workshop_screenshot.jpg"
+                  className="px-2.5 py-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs flex items-center gap-1 transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5" /> Download
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setActivePreview(null)}
+                  className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-700 transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            <div className="p-2 flex items-center justify-center overflow-auto max-h-[80vh] bg-slate-950">
+              <img
+                src={activePreview}
+                alt="Enlarged screenshot"
+                className="max-w-full max-h-[75vh] object-contain rounded"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   )
 }

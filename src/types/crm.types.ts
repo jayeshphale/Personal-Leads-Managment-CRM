@@ -103,11 +103,13 @@ export interface Lead {
   occupation?: string
   lead_source: string
   notes?: string
+  notes_images?: string[]
   interest_status: InterestStatus
   call_status: CallStatus
   whatsapp_status: WhatsAppStatus
   closing_status: ClosingStatus
   closing_notes?: string
+  closing_notes_images?: string[]
   next_follow_up_date?: string | null
   created_at: string
   updated_at: string
@@ -121,6 +123,7 @@ export interface LeadActivity {
   old_value?: string | null
   new_value?: string | null
   notes?: string | null
+  images?: string[]
   created_at: string
 }
 
@@ -168,6 +171,7 @@ export interface WorkshopRegistration {
   attendance_status: AttendanceStatus
   attendance_date?: string | null
   notes?: string
+  receipt_images?: string[]
   registered_at: string
   workshop?: Workshop
   lead?: Lead
@@ -183,6 +187,7 @@ export interface CourseEnrollment {
   amount: number
   payment_status: PaymentStatus
   notes?: string
+  receipt_images?: string[]
   created_at: string
   updated_at: string
   lead?: Lead

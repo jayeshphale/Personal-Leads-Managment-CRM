@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import type { Lead, CourseEnrollment, Package, PackageName, PaymentStatus } from '@/types/crm.types'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { GraduationCap, Plus, IndianRupee, CreditCard, ShieldCheck } from 'lucide-react'
+import { GraduationCap, Plus, IndianRupee, CreditCard, ShieldCheck, Image as ImageIcon, ZoomIn, Download, X } from 'lucide-react'
 import { getStatusBadge } from '@/components/ui/badge'
 import { formatCurrency, formatDateSafe } from '@/lib/utils'
 import {
@@ -14,6 +14,7 @@ import {
 import { useToast } from '@/components/ui/toast'
 import { Dialog } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { ScreenshotAttachment } from '@/components/common/ScreenshotAttachment'
 
 interface EnrollmentSectionProps {
   lead: Lead
@@ -35,7 +36,9 @@ export const EnrollmentSection: React.FC<EnrollmentSectionProps> = ({ lead, onLe
     new Date().toISOString().split('T')[0]
   )
   const [notes, setNotes] = useState<string>('')
+  const [receiptImages, setReceiptImages] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [activePreview, setActivePreview] = useState<string | null>(null)
 
   const loadData = async () => {
     try {
@@ -81,6 +84,7 @@ export const EnrollmentSection: React.FC<EnrollmentSectionProps> = ({ lead, onLe
         amount: Number(amount),
         payment_status: paymentStatus,
         notes: notes || undefined,
+        receipt_images: receiptImages.length > 0 ? receiptImages : undefined,
       })
 
       success(
@@ -88,6 +92,8 @@ export const EnrollmentSection: React.FC<EnrollmentSectionProps> = ({ lead, onLe
         `Successfully enrolled candidate into ${selectedPackageName} package.`
       )
       setIsModalOpen(false)
+      setNotes('')
+      setReceiptImages([])
       loadData()
       onLeadUpdated()
     } catch (err: any) {
@@ -114,22 +120,26 @@ export const EnrollmentSection: React.FC<EnrollmentSectionProps> = ({ lead, onLe
           <GraduationCap className="w-4 h-4 text-emerald-600" />
           Course Enrollment & Billing
         </CardTitle>
-        <Button size="sm" onClick={() => setIsModalOpen(true)}>
+        <Button size="sm" onClick={() => setIsModalOpen(true)} className="text-xs">
           <Plus className="w-3.5 h-3.5 mr-1" />
-          Enroll in Course
+          Enrol Candidate
         </Button>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent>
         {enrollments.length === 0 ? (
-          <div className="py-6 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-lg">
-            Candidate has not enrolled into any course package yet.
+          <div className="text-center py-6 border border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+            <GraduationCap className="w-8 h-8 text-slate-300 mx-auto mb-1.5" />
+            <p className="text-xs font-semibold text-slate-700">No Course Enrollments Yet</p>
+            <p className="text-[11px] text-slate-400 max-w-xs mx-auto mt-0.5">
+              Once candidate decides to join, enrol them into Standard, Prime, Infinity, or Legacy package.
+            </p>
           </div>
         ) : (
-          <div className="space-y-2.5">
+          <div className="space-y-3">
             {enrollments.map((enr) => (
               <div
                 key={enr.id}
-                className="p-4 rounded-xl border border-slate-200/90 bg-emerald-50/20 flex flex-wrap items-center justify-between gap-4"
+                className="p-4 rounded-xl border border-slate-200/90 bg-emerald-50/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
               >
                 <div>
                   <div className="flex items-center gap-2">
@@ -142,6 +152,28 @@ export const EnrollmentSection: React.FC<EnrollmentSectionProps> = ({ lead, onLe
                     Enrolled on: {formatDateSafe(enr.enrollment_date)}
                     {enr.notes && <span className="ml-2 font-normal italic">— "{enr.notes}"</span>}
                   </p>
+
+                  {/* Payment Proof Screenshots */}
+                  {enr.receipt_images && enr.receipt_images.length > 0 && (
+                    <div className="mt-2 flex items-center gap-2 flex-wrap">
+                      <span className="text-[11px] font-semibold text-slate-500 flex items-center gap-1">
+                        <ImageIcon className="w-3 h-3 text-emerald-600" /> Payment Proof:
+                      </span>
+                      {enr.receipt_images.map((img, idx) => (
+                        <div
+                          key={idx}
+                          onClick={() => setActivePreview(img)}
+                          className="relative w-12 h-12 rounded border border-slate-200 overflow-hidden cursor-pointer hover:border-emerald-500 shadow-2xs group"
+                          title="Click to view payment proof"
+                        >
+                          <img src={img} alt="Payment Proof" className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[10px]">
+                            <ZoomIn className="w-3.5 h-3.5" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -154,7 +186,7 @@ export const EnrollmentSection: React.FC<EnrollmentSectionProps> = ({ lead, onLe
                   <select
                     value={enr.payment_status}
                     onChange={(e) => handlePaymentUpdate(enr.id, e.target.value as PaymentStatus)}
-                    className="h-8 text-xs bg-white border border-slate-300 rounded-md px-2 text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs"
+                    className="h-8 text-xs bg-white border border-slate-300 rounded-md px-2 text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs cursor-pointer"
                   >
                     {paymentStatuses.map((p) => (
                       <option key={p} value={p}>
@@ -174,7 +206,7 @@ export const EnrollmentSection: React.FC<EnrollmentSectionProps> = ({ lead, onLe
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title="Enroll Candidate into Course"
-        description="Select package tier and specify payment collection details. Historical records are preserved."
+        description="Select package tier and specify payment collection details. Attach payment screenshots (GPay/PhonePe/NEFT)."
         maxWidth="md"
       >
         <form onSubmit={handleEnroll} className="space-y-4">
@@ -220,7 +252,7 @@ export const EnrollmentSection: React.FC<EnrollmentSectionProps> = ({ lead, onLe
               <select
                 value={paymentStatus}
                 onChange={(e) => setPaymentStatus(e.target.value as PaymentStatus)}
-                className="w-full h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs"
+                className="w-full h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs cursor-pointer"
               >
                 {paymentStatuses.map((s) => (
                   <option key={s} value={s}>
@@ -256,6 +288,14 @@ export const EnrollmentSection: React.FC<EnrollmentSectionProps> = ({ lead, onLe
             />
           </div>
 
+          <ScreenshotAttachment
+            images={receiptImages}
+            onChange={setReceiptImages}
+            label="Payment Proof / Screenshot (GPay, PhonePe, Paytm, NEFT)"
+            helperText="Attach screenshot(s) or press Ctrl+V to paste payment proof from clipboard"
+            compact
+          />
+
           <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
             <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
               Cancel
@@ -266,6 +306,48 @@ export const EnrollmentSection: React.FC<EnrollmentSectionProps> = ({ lead, onLe
           </div>
         </form>
       </Dialog>
+
+      {/* Lightbox Preview Modal */}
+      {activePreview && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4 animate-in fade-in duration-200"
+          onClick={() => setActivePreview(null)}
+        >
+          <div
+            className="relative max-w-4xl max-h-[90vh] bg-slate-900 rounded-xl overflow-hidden border border-slate-700 shadow-2xl flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-4 py-2.5 bg-slate-800 text-white border-b border-slate-700 text-xs">
+              <span className="font-semibold flex items-center gap-1.5">
+                <ImageIcon className="w-4 h-4 text-emerald-400" /> Payment Proof Screenshot
+              </span>
+              <div className="flex items-center gap-2">
+                <a
+                  href={activePreview}
+                  download="payment_proof.jpg"
+                  className="px-2.5 py-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs flex items-center gap-1 transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5" /> Download
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setActivePreview(null)}
+                  className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-700 transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            <div className="p-2 flex items-center justify-center overflow-auto max-h-[80vh] bg-slate-950">
+              <img
+                src={activePreview}
+                alt="Payment proof screenshot"
+                className="max-w-full max-h-[75vh] object-contain rounded"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   )
 }

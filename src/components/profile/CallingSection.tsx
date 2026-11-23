@@ -9,6 +9,7 @@ import { updateLead } from '@/services/leads.service'
 import { logActivity } from '@/services/activities.service'
 import { createReminder } from '@/services/reminders.service'
 import { useToast } from '@/components/ui/toast'
+import { ScreenshotAttachment } from '@/components/common/ScreenshotAttachment'
 
 interface CallingSectionProps {
   lead: Lead
@@ -27,6 +28,7 @@ export const CallingSection: React.FC<CallingSectionProps> = ({ lead, onLeadUpda
   const { success, error } = useToast()
   const [selectedStatus, setSelectedStatus] = useState<CallStatus>(lead.call_status)
   const [callNotes, setCallNotes] = useState('')
+  const [callImages, setCallImages] = useState<string[]>([])
   const [followUpDate, setFollowUpDate] = useState('')
   const [followUpTime, setFollowUpTime] = useState('11:00')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -48,14 +50,21 @@ export const CallingSection: React.FC<CallingSectionProps> = ({ lead, onLeadUpda
         lead
       )
 
-      // 2. Log activity
+      // 2. Log activity with attached screenshots
       await logActivity({
         lead_id: lead.id,
         activity_type: selectedStatus === 'Connected' ? 'Call Connected' : 'Call Attempted',
         old_value: lead.call_status,
         new_value: selectedStatus,
         notes: callNotes || undefined,
+        images: callImages.length > 0 ? callImages : undefined,
       })
+
+      // If call screenshots attached, merge with candidate general notes images
+      if (callImages.length > 0) {
+        const merged = [...(lead.notes_images || []), ...callImages]
+        await updateLead(lead.id, { notes_images: merged }, lead)
+      }
 
       // 3. If follow-up date scheduled, create reminder
       if (followUpDate) {
@@ -71,6 +80,7 @@ export const CallingSection: React.FC<CallingSectionProps> = ({ lead, onLeadUpda
 
       success('Call Logged', `Call outcome updated to ${selectedStatus}.`)
       setCallNotes('')
+      setCallImages([])
       setFollowUpDate('')
       onLeadUpdated()
     } catch (err: any) {
@@ -148,6 +158,13 @@ export const CallingSection: React.FC<CallingSectionProps> = ({ lead, onLeadUpda
               className="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs"
             />
           </div>
+
+          <ScreenshotAttachment
+            images={callImages}
+            onChange={setCallImages}
+            label="Call Discussion & WhatsApp Screenshots"
+            compact
+          />
 
           {/* Schedule Next Follow-up */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200/70">

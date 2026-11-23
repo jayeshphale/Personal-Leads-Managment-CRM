@@ -159,7 +159,11 @@ export const LeadDetails: React.FC = () => {
         {/* Left Two-Thirds: Core Sections */}
         <div className="lg:col-span-2 space-y-6">
           {/* Section A: Personal Information */}
-          <PersonalInfoSection lead={lead} onEdit={() => setIsEditModalOpen(true)} />
+          <PersonalInfoSection
+            lead={lead}
+            onEdit={() => setIsEditModalOpen(true)}
+            onLeadUpdated={loadLeadData}
+          />
 
           {/* Section B: Calling Tracking */}
           <CallingSection lead={lead} onLeadUpdated={loadLeadData} />

@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import type { LeadActivity } from '@/types/crm.types'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import {
@@ -10,7 +10,11 @@ import {
   BellRing,
   Edit,
   UserPlus,
-  Clock
+  Clock,
+  Image as ImageIcon,
+  ZoomIn,
+  Download,
+  X
 } from 'lucide-react'
 import { formatDateTimeSafe } from '@/lib/utils'
 
@@ -23,6 +27,8 @@ export const ActivityTimelineSection: React.FC<ActivityTimelineSectionProps> = (
   activities,
   isLoading,
 }) => {
+  const [activePreview, setActivePreview] = useState<string | null>(null)
+
   const getActivityIcon = (type: string) => {
     switch (type) {
       case 'Lead Created':
@@ -101,9 +107,28 @@ export const ActivityTimelineSection: React.FC<ActivityTimelineSectionProps> = (
                   )}
 
                   {act.notes && (
-                    <p className="mt-1 text-xs text-slate-500 italic bg-white/70 p-1.5 rounded border border-slate-100">
+                    <p className="mt-1 text-xs text-slate-500 italic bg-white/70 p-1.5 rounded border border-slate-100 whitespace-pre-wrap">
                       "{act.notes}"
                     </p>
+                  )}
+
+                  {/* Attached Activity Screenshots */}
+                  {act.images && act.images.length > 0 && (
+                    <div className="mt-2 flex items-center gap-2 flex-wrap">
+                      {act.images.map((img, idx) => (
+                        <div
+                          key={idx}
+                          onClick={() => setActivePreview(img)}
+                          className="relative w-12 h-12 rounded border border-slate-200 overflow-hidden cursor-pointer hover:border-blue-500 shadow-2xs group bg-white"
+                          title="Click to view attached screenshot"
+                        >
+                          <img src={img} alt="Activity attachment" className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[10px]">
+                            <ZoomIn className="w-3.5 h-3.5" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>
@@ -111,6 +136,48 @@ export const ActivityTimelineSection: React.FC<ActivityTimelineSectionProps> = (
           </div>
         )}
       </CardContent>
+
+      {/* Lightbox Preview Modal */}
+      {activePreview && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4 animate-in fade-in duration-200"
+          onClick={() => setActivePreview(null)}
+        >
+          <div
+            className="relative max-w-4xl max-h-[90vh] bg-slate-900 rounded-xl overflow-hidden border border-slate-700 shadow-2xl flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-4 py-2.5 bg-slate-800 text-white border-b border-slate-700 text-xs">
+              <span className="font-semibold flex items-center gap-1.5">
+                <ImageIcon className="w-4 h-4 text-blue-400" /> Activity Screenshot
+              </span>
+              <div className="flex items-center gap-2">
+                <a
+                  href={activePreview}
+                  download="activity_screenshot.jpg"
+                  className="px-2.5 py-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs flex items-center gap-1 transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5" /> Download
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setActivePreview(null)}
+                  className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-700 transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            <div className="p-2 flex items-center justify-center overflow-auto max-h-[80vh] bg-slate-950">
+              <img
+                src={activePreview}
+                alt="Enlarged screenshot"
+                className="max-w-full max-h-[75vh] object-contain rounded"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   )
 }
