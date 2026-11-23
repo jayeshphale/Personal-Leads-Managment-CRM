@@ -371,3 +371,12 @@ CREATE INDEX IF NOT EXISTS idx_workshop_reg_lead ON public.workshop_registration
 CREATE INDEX IF NOT EXISTS idx_course_enrollments_owner ON public.course_enrollments(owner_id, enrollment_date DESC);
 CREATE INDEX IF NOT EXISTS idx_course_enrollments_lead ON public.course_enrollments(lead_id);
 CREATE INDEX IF NOT EXISTS idx_course_enrollments_package ON public.course_enrollments(package_name, payment_status);
+-- Grant permissions to authenticated and anon roles for Supabase PostgREST
+GRANT USAGE ON SCHEMA public TO anon, authenticated;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;
+GRANT ALL ON ALL ROUTINES IN SCHEMA public TO anon, authenticated;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON ROUTINES TO anon, authenticated;
