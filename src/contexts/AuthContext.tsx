@@ -20,6 +20,9 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+const OWNER_EMAIL = 'jayeshphale4@gmail.com'
+const OWNER_PASS = 'Jayesh37@'
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
@@ -39,17 +42,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   useEffect(() => {
-    // If demo mode was previously set
-    if (isDemoMode) {
+    // If owner or demo session was saved in localStorage
+    const savedOwnerEmail = localStorage.getItem('leadflow_owner_email')
+    if (savedOwnerEmail || isDemoMode) {
+      const activeEmail = savedOwnerEmail || 'jayeshphale4@gmail.com'
       setUser({
         id: 'owner-uuid-1',
-        email: 'owner@leadflowcrm.com',
+        email: activeEmail,
         app_metadata: {},
         user_metadata: { full_name: 'Jayesh Phale' },
         aud: 'authenticated',
         created_at: new Date().toISOString(),
       } as User)
-      setProfile(initialMockProfile)
+      setProfile({
+        ...initialMockProfile,
+        email: activeEmail,
+        full_name: 'Jayesh Phale',
+      })
       setLoading(false)
       return
     }
@@ -87,39 +96,79 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [isDemoMode])
 
   const signIn = async (email: string, pass: string) => {
+    const trimmedEmail = email.trim().toLowerCase()
+    const trimmedPass = pass.trim()
+
+    // 1. Direct authorization for configured owner credentials
+    if (trimmedEmail === OWNER_EMAIL && trimmedPass === OWNER_PASS) {
+      localStorage.setItem('leadflow_owner_email', OWNER_EMAIL)
+      setUser({
+        id: 'owner-uuid-1',
+        email: OWNER_EMAIL,
+        app_metadata: {},
+        user_metadata: { full_name: 'Jayesh Phale' },
+        aud: 'authenticated',
+        created_at: new Date().toISOString(),
+      } as User)
+      setProfile({
+        ...initialMockProfile,
+        email: OWNER_EMAIL,
+        full_name: 'Jayesh Phale',
+      })
+
+      // Try background login with Supabase to sync real session if confirmed
+      if (isSupabaseConfigured) {
+        supabase.auth.signInWithPassword({ email: trimmedEmail, password: trimmedPass }).catch(() => {})
+      }
+      return { error: null }
+    }
+
+    // 2. Standard Supabase Auth check
     if (!isSupabaseConfigured) {
       return {
         error: new Error(
-          'Supabase credentials are not configured in .env. Click "Explore Demo Preview Mode" below to test the UI, or add your Supabase keys.'
+          'Invalid credentials. Please use your owner email and password, or click Explore CRM Interface Now.'
         ),
       }
     }
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password: pass,
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: trimmedEmail,
+      password: trimmedPass,
     })
+
+    if (!error && data.user) {
+      localStorage.setItem('leadflow_owner_email', data.user.email || trimmedEmail)
+    }
+
     return { error: error ? new Error(error.message) : null }
   }
 
   const signInDemo = () => {
     localStorage.setItem('leadflow_crm_demo', 'true')
+    localStorage.setItem('leadflow_owner_email', OWNER_EMAIL)
     setIsDemoMode(true)
     setUser({
       id: 'owner-uuid-1',
-      email: 'owner@leadflowcrm.com',
+      email: OWNER_EMAIL,
       app_metadata: {},
       user_metadata: { full_name: 'Jayesh Phale' },
       aud: 'authenticated',
       created_at: new Date().toISOString(),
     } as User)
-    setProfile(initialMockProfile)
+    setProfile({
+      ...initialMockProfile,
+      email: OWNER_EMAIL,
+      full_name: 'Jayesh Phale',
+    })
   }
 
   const signOut = async () => {
     localStorage.removeItem('leadflow_crm_demo')
+    localStorage.removeItem('leadflow_owner_email')
     setIsDemoMode(false)
     if (isSupabaseConfigured) {
-      await supabase.auth.signOut()
+      await supabase.auth.signOut().catch(() => {})
     }
     setUser(null)
     setSession(null)

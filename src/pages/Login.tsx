@@ -174,7 +174,7 @@ export const Login: React.FC = () => {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="owner@yourdomain.com"
+                  placeholder="jayeshphale4@gmail.com"
                   icon={<Mail className="w-4 h-4" />}
                   required
                 />
